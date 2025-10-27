@@ -112,21 +112,37 @@ def render_observation_chart(obs_df: pd.DataFrame, variable: str):
     base_title = VAR_TITLES.get(variable, variable)
     y_title = f"{base_title} ({unit})" if unit else base_title
     date_axis = alt.Axis(format="%b %-d", labelAngle=-40, title="Date")
-    chart = (
-        alt.Chart(subset)
-        .mark_line(point=True)
-        .encode(
-            x=alt.X("date:T", axis=date_axis),
-            y=alt.Y("value:Q", title=y_title),
-            tooltip=[
-                alt.Tooltip("date:T", title="Date"),
-                alt.Tooltip("value:Q", title=f"{variable}", format=".2f"),
-                alt.Tooltip("qc_flag:N", title="QC Flag"),
-            ],
+    if variable == "PRCP":
+        chart = (
+            alt.Chart(subset)
+            .mark_bar()
+            .encode(
+                x=alt.X("date:T", axis=date_axis),
+                y=alt.Y("value:Q", title=y_title),
+                tooltip=[
+                    alt.Tooltip("date:T", title="Date"),
+                    alt.Tooltip("value:Q", title="Precipitation", format=".2f"),
+                    alt.Tooltip("qc_flag:N", title="QC Flag"),
+                ],
+            )
+            .properties(height=280)
         )
-        .properties(height=280)
-        .interactive()
-    )
+    else:
+        chart = (
+            alt.Chart(subset)
+            .mark_line(point=True)
+            .encode(
+                x=alt.X("date:T", axis=date_axis),
+                y=alt.Y("value:Q", title=y_title),
+                tooltip=[
+                    alt.Tooltip("date:T", title="Date"),
+                    alt.Tooltip("value:Q", title=base_title, format=".2f"),
+                    alt.Tooltip("qc_flag:N", title="QC Flag"),
+                ],
+            )
+            .properties(height=280)
+            .interactive()
+        )
     st.altair_chart(chart, use_container_width=True)
 
 
@@ -204,7 +220,7 @@ def render_history_chart(history_pairs: pd.DataFrame, variable: str, leads: Iter
             tooltip=[
                 alt.Tooltip("valid_date:T", title="Valid Date"),
                 alt.Tooltip("series:N", title="Series"),
-                alt.Tooltip("value:Q", title="Value", format=".2f"),
+                alt.Tooltip("value:Q", title=VAR_TITLES.get(variable, "Value"), format=".2f"),
             ],
         )
         .properties(height=350)
@@ -239,6 +255,9 @@ def main():
             disabled=st_folium is None,
             help="Click on the map to update the forecast location." if st_folium else "Install streamlit-folium to enable the map picker.",
         )
+        prev_lat = st.session_state["selected_location"]["lat"]
+        prev_lon = st.session_state["selected_location"]["lon"]
+
         lat = st.number_input(
             "Latitude",
             value=float(st.session_state["selected_location"]["lat"]),
@@ -251,6 +270,8 @@ def main():
             format="%.4f",
             key="longitude_input",
         )
+        if abs(lat - prev_lat) > 1e-6 or abs(lon - prev_lon) > 1e-6:
+            st.session_state["fetch_trigger"] = False
         st.session_state["selected_location"] = {"lat": lat, "lon": lon}
         variables = st.multiselect(
             "Variables",
@@ -301,6 +322,7 @@ def main():
                         "lat": lat_clicked,
                         "lon": lon_clicked,
                     }
+                    st.session_state["fetch_trigger"] = False
                     st.rerun()
         with info_col:
             st.markdown(
@@ -343,16 +365,24 @@ def main():
 
     obs_df = pd.DataFrame()
     station = None
+    candidate_status = st.empty()
     for candidate in station_candidates[:10]:
         station_id = candidate.get("station_id") or candidate.get("id")
+        distance_km = candidate.get("distance_km")
+        distance_mi = distance_km * 0.621371 if isinstance(distance_km, (int, float)) else None
+        distance_text = f"{distance_mi:.1f} mi" if distance_mi is not None else ""
+        station_name = candidate.get("name", station_id)
+        candidate_status.info(f"Checking {station_name} {distance_text} ...")
         try:
             obs_df = _fetch_observations(station_id, start_date, end_date, selected_variables)
         except Exception as exc:  # pragma: no cover
-            st.warning(f"Observation fetch failed for {station_id}: {exc}")
+            candidate_status.warning(f"{station_name} {distance_text} — fetch failed: {exc}")
             continue
         if not obs_df.empty:
+            candidate_status.success(f"Found observation data at {station_name} {distance_text}.")
             station = candidate
             break
+        candidate_status.warning(f"No data available for {station_name} {distance_text}.")
 
     if station is None or obs_df.empty:
         st.warning("No observations available for nearby stations in the selected date range.")
@@ -360,7 +390,9 @@ def main():
         return
 
     distance = station.get("distance_km")
-    distance_text = f"{distance:.1f} km away" if isinstance(distance, (int, float)) else ""
+    distance_text = ""
+    if isinstance(distance, (int, float)):
+        distance_text = f"{distance * 0.621371:.1f} mi away"
     st.success(
         f"Using station: {station.get('name', station.get('station_id'))} "
         f"({station.get('station_id')}) {distance_text}"
