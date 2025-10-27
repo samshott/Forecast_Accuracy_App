@@ -1,0 +1,21 @@
+[app]
+title = "Forecast Accuracy App"
+default_lat = 44.95
+default_lon = -93.09
+default_state = "MN"
+default_variables = ["TMAX", "TMIN", "PRCP"]
+default_lead_hours = [0, 24, 48, 72, 96, 120, 144, 168]
+
+[data]
+cache_dir = "data"
+forecast_dir = "data/forecasts"
+obs_dir = "data/obs"
+scores_dir = "data/scores"
+
+[api]
+nws_base_url = "https://api.weather.gov/gridpoints"
+nws_timeout = 30
+nws_retries = 3
+ncei_base_url = "https://www.ncdc.noaa.gov/cdo-web/api/v2"
+ncei_timeout = 30
+ncei_retries = 3

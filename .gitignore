@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.python-version
+.env
+.env.*
+*.db
+*.duckdb
+data/
+.streamlit/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.parquet
