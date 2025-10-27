@@ -28,6 +28,7 @@ class DataConfig:
     forecast_dir: Path
     obs_dir: Path
     scores_dir: Path
+    archive_dir: Path
 
 
 @dataclass(frozen=True)
@@ -43,10 +44,20 @@ class APIConfig:
 
 
 @dataclass(frozen=True)
+class ForecastArchiveConfig:
+    base_url: str
+    sector: str
+    product_files: dict[str, str]
+    grid: str
+    archive_dir: Path
+
+
+@dataclass(frozen=True)
 class Settings:
     app: AppConfig
     data: DataConfig
     api: APIConfig
+    forecast_archive: ForecastArchiveConfig
     database_url: str
 
 
@@ -72,7 +83,8 @@ def load_settings() -> Settings:
     forecast_dir = (_PROJECT_ROOT / data_section.get("forecast_dir", "data/forecasts")).resolve()
     obs_dir = (_PROJECT_ROOT / data_section.get("obs_dir", "data/obs")).resolve()
     scores_dir = (_PROJECT_ROOT / data_section.get("scores_dir", "data/scores")).resolve()
-    for path in (cache_dir, forecast_dir, obs_dir, scores_dir):
+    archive_dir = (_PROJECT_ROOT / data_section.get("archive_dir", "data/ndfd")).resolve()
+    for path in (cache_dir, forecast_dir, obs_dir, scores_dir, archive_dir):
         path.mkdir(parents=True, exist_ok=True)
 
     api_section = raw.get("api", {})
@@ -96,6 +108,7 @@ def load_settings() -> Settings:
         forecast_dir=forecast_dir,
         obs_dir=obs_dir,
         scores_dir=scores_dir,
+        archive_dir=archive_dir,
     )
     api_cfg = APIConfig(
         nws_base_url=api_section.get("nws_base_url", "https://api.weather.gov/gridpoints"),
@@ -107,7 +120,28 @@ def load_settings() -> Settings:
         nws_user_agent=nws_user_agent,
         ncei_token=ncei_token,
     )
-    return Settings(app=app_cfg, data=data_cfg, api=api_cfg, database_url=database_url)
+    archive_section = raw.get("forecast_archive", {})
+    forecast_archive_cfg = ForecastArchiveConfig(
+        base_url=archive_section.get("base_url", ""),
+        sector=archive_section.get("sector", "conus"),
+        product_files=dict(archive_section.get("product_files", {})),
+        grid=archive_section.get("grid", "ndfd"),
+        archive_dir=archive_dir,
+    )
+    return Settings(
+        app=app_cfg,
+        data=data_cfg,
+        api=api_cfg,
+        forecast_archive=forecast_archive_cfg,
+        database_url=database_url,
+    )
 
 
-__all__ = ["load_settings", "Settings", "AppConfig", "DataConfig", "APIConfig"]
+__all__ = [
+    "load_settings",
+    "Settings",
+    "AppConfig",
+    "DataConfig",
+    "APIConfig",
+    "ForecastArchiveConfig",
+]

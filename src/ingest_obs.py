@@ -12,10 +12,30 @@ from .http import build_session
 DATASET_ID = "GHCND"
 DEFAULT_LIMIT = 1000
 
+def _convert_temp(value: Optional[float]) -> Optional[float]:
+    if value is None or value <= -9000:
+        return None
+    celsius = value / 10.0
+    return celsius * 9.0 / 5.0 + 32.0
+
+
+def _convert_precip(value: Optional[float]) -> Optional[float]:
+    if value is None or value < 0:
+        return None
+    millimeters = value / 10.0
+    return millimeters / 25.4
+
+
 VALUE_CONVERSIONS = {
-    "TMAX": lambda v: v / 10 if v is not None else None,
-    "TMIN": lambda v: v / 10 if v is not None else None,
-    "PRCP": lambda v: v / 10 if v is not None else None,
+    "TMAX": _convert_temp,
+    "TMIN": _convert_temp,
+    "PRCP": _convert_precip,
+}
+
+UNITS = {
+    "TMAX": "°F",
+    "TMIN": "°F",
+    "PRCP": "in",
 }
 
 
@@ -43,7 +63,6 @@ def get_ncei_daily_obs(
         "stationid": station_id,
         "startdate": _to_datestr(start),
         "enddate": _to_datestr(end),
-        "units": "metric",
         "limit": DEFAULT_LIMIT,
         "offset": 1,
     }
@@ -76,7 +95,8 @@ def get_ncei_daily_obs(
     df["network"] = df["station_id"].str.split(":").str[0]
     df["qc_flag"] = df["attributes"].fillna("")
     df["value"] = df.apply(lambda row: VALUE_CONVERSIONS.get(row["var"], lambda v: v)(row["value"]), axis=1)
-    return df[["station_id", "network", "date", "var", "value", "qc_flag"]]
+    df["unit"] = df["var"].map(UNITS).fillna("")
+    return df[["station_id", "network", "date", "var", "value", "unit", "qc_flag"]]
 
 
 __all__ = ["get_ncei_daily_obs"]

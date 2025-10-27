@@ -11,7 +11,7 @@
 - Parquet writers/readers; `catalog.yaml` or DuckDB metadata tables.
 
 ## P1 — Data Pipeline
-- NDFD archive reader (xarray/zarr/GRIB) for backfill.
+- [x] NDFD archive reader (xarray/GRIB) for backfill (`src/ingest_forecast_archive.py`).
 - Daily cron (e.g., GitHub Action) to append the latest cycle snapshots.
 - Station coverage map (pydeck / leafmap).
 - Basic data-quality report per station.
@@ -25,4 +25,3 @@
 - Add retries, caching, and logging instrumentation.
 - Data coverage dashboards, last-update timestamps.
 - Docker image & CI quick tests.
-

@@ -49,6 +49,26 @@ pytest
 streamlit run app/StreamlitApp.py
 ```
 
+In the app, you can adjust latitude/longitude manually or enable the map picker (via `streamlit-folium`) to click and move the verification target interactively.
+The Streamlit tab uses `app/forecast_accuracy_app.ico` automatically when present; swap the icon to rebrand.
+The **History** tab (enabled once archive data exists) plots observed vs. forecast values by lead hour, pulling from the Parquet backfill.
+
+### 6. Backfill historical forecasts (optional)
+
+Use the NDFD archive ingestor to download and persist historical grids by issue time:
+
+```bash
+python -m src.ingest_forecast_archive --issue 2024-05-01T00 --vars TMAX TMIN PRCP
+```
+
+Options:
+
+- `--bbox MIN_LAT MIN_LON MAX_LAT MAX_LON` subsets the grid to a bounding box.
+- `--overwrite-download` forces a fresh download even if the GRIB is cached under `data/ndfd/`.
+- `--no-parquet` skips writing the tidy Parquet output (for dry runs).
+
+Parquet outputs land in `data/forecasts/{var}/{issue}.parquet`, ready for matching with observations.
+
 ## Repository Layout
 
 ```
@@ -86,4 +106,3 @@ Subsequent phases add archival ingest, cron-style refresh, verification extras, 
 2. Update or add tests alongside code changes.
 3. Run `pytest` and `streamlit run app/StreamlitApp.py` to verify.
 4. Submit a PR with a short summary and testing notes.
-

@@ -10,6 +10,7 @@ dependencies:
   - pyarrow
   - requests
   - streamlit
+  - altair
   - sqlalchemy
   - duckdb
   - geopandas
@@ -23,3 +24,4 @@ dependencies:
       - python-dotenv
       - duckdb-engine
       - psycopg[binary]
+      - streamlit-folium
