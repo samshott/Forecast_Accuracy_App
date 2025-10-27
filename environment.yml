@@ -21,3 +21,5 @@ dependencies:
   - pytest
   - pip:
       - python-dotenv
+      - duckdb-engine
+      - psycopg[binary]

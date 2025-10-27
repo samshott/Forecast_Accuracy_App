@@ -1,9 +1,15 @@
 from __future__ import annotations
 
 from datetime import date, timedelta
+from pathlib import Path
+import sys
 
 import pandas as pd
 import streamlit as st
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))
 
 from src.config import load_settings
 from src.ingest_current_forecast import get_current_gridpoint_forecast

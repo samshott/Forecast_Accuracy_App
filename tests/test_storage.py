@@ -4,8 +4,8 @@ from src.storage import append_pairs, get_engine, init_db, upsert_station
 
 
 def test_storage_append_pairs(tmp_path, monkeypatch):
-    db_path = tmp_path / "storage.duckdb"
-    monkeypatch.setenv("DATABASE_URL", f"duckdb:///{db_path}")
+    db_path = tmp_path / "storage.sqlite"
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
 
     init_db()
     station_meta = {

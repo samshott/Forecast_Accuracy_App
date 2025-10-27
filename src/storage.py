@@ -13,6 +13,7 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Integer,
+    Identity,
     MetaData,
     String,
     UniqueConstraint,
@@ -50,7 +51,7 @@ class Pair(Base):
         UniqueConstraint("station_id", "var", "valid_date", "lead_hours", "issue_time", name="uq_pair"),
     )
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, Identity(start=1, cycle=False), primary_key=True)
     station_id: Mapped[str] = mapped_column(String, ForeignKey("stations.station_id"))
     var: Mapped[str] = mapped_column(String, nullable=False)
     valid_date: Mapped[datetime] = mapped_column(Date, nullable=False)
@@ -68,7 +69,7 @@ class DailyScore(Base):
         UniqueConstraint("station_id", "var", "valid_date", "lead_hours", name="uq_score_daily"),
     )
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, Identity(start=1, cycle=False), primary_key=True)
     station_id: Mapped[str] = mapped_column(String, ForeignKey("stations.station_id"))
     var: Mapped[str] = mapped_column(String, nullable=False)
     valid_date: Mapped[datetime] = mapped_column(Date, nullable=False)
