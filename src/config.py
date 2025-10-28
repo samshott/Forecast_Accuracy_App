@@ -47,7 +47,7 @@ class APIConfig:
 class ForecastArchiveConfig:
     base_url: str
     sector: str
-    product_files: dict[str, str]
+    product_files: dict[str, tuple[str, ...]]
     grid: str
     archive_dir: Path
 
@@ -121,10 +121,19 @@ def load_settings() -> Settings:
         ncei_token=ncei_token,
     )
     archive_section = raw.get("forecast_archive", {})
+    product_files_raw = archive_section.get("product_files", {})
+    product_files: dict[str, tuple[str, ...]] = {}
+    for key, value in product_files_raw.items():
+        if isinstance(value, str):
+            product_files[key] = (value,)
+        elif isinstance(value, (list, tuple)):
+            product_files[key] = tuple(value)
+        else:
+            raise ValueError(f"Unsupported product_files entry for {key}: {value}")
     forecast_archive_cfg = ForecastArchiveConfig(
         base_url=archive_section.get("base_url", ""),
         sector=archive_section.get("sector", "conus"),
-        product_files=dict(archive_section.get("product_files", {})),
+        product_files=product_files,
         grid=archive_section.get("grid", "ndfd"),
         archive_dir=archive_dir,
     )

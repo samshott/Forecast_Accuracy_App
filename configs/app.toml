@@ -22,7 +22,7 @@ ncei_timeout = 30
 ncei_retries = 3
 
 [forecast_archive]
-base_url = "https://nomads.ncep.noaa.gov/pub/data/nccf/com/ndgd/prod"
-sector = "conus"
-product_files = { TMAX = "ds.max_temp.bin", TMIN = "ds.min_temp.bin", PRCP = "ds.qpf.bin" }
-grid = "ndfd"
+base_url = "https://tgftp.nws.noaa.gov/SL.us008001/ST.opnl/DF.gr2/DC.ndfd/AR.conus"
+sector = ""
+product_files = { TMAX = "VP.001-003/ds.maxt.bin", TMIN = "VP.001-003/ds.mint.bin", PRCP = "VP.001-003/ds.qpf.bin" }
+grid = ""

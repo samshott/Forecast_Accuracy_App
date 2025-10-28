@@ -64,6 +64,17 @@ python -m src.ingest_forecast_archive --issue 2024-05-01T00 --vars TMAX TMIN PRC
 Options:
 
 - `--bbox MIN_LAT MIN_LON MAX_LAT MAX_LON` subsets the grid to a bounding box.
+- `--start` / `--end` (with `--step-hours`) backfill a range of issue times, e.g.:
+
+  ```bash
+  python -m src.ingest_forecast_archive \
+      --start 2024-05-01T00 --end 2024-05-03T18 --step-hours 6 \
+      --vars TMAX TMIN PRCP \
+      --lat 44.95 --lon -93.09 --radius-km 100
+  ```
+
+  Supplying `--lat/--lon` automatically derives a bounding box around the location.
+- Files come from the public `tgftp.nws.noaa.gov` NDFD feed, which only hosts the most recent forecast cycles. Run the ingestor regularly (or rely on the Streamlit “Fetch & Verify” action) to keep history populated.
 - `--overwrite-download` forces a fresh download even if the GRIB is cached under `data/ndfd/`.
 - `--no-parquet` skips writing the tidy Parquet output (for dry runs).
 

@@ -50,10 +50,10 @@ def _make_settings(tmp_path: Path) -> Settings:
         ncei_token="TEST",
     )
     archive_cfg = ForecastArchiveConfig(
-        base_url="https://example.com",
-        sector="conus",
-        product_files={"TMAX": "ds.max_temp.bin"},
-        grid="ndfd",
+        base_url="https://example.com/conus",
+        sector="",
+        product_files={"TMAX": ("VP.001-003/ds.maxt.bin",)},
+        grid="",
         archive_dir=archive_dir,
     )
     return Settings(
@@ -72,10 +72,10 @@ def test_ingest_ndfd_archive_writes_parquet(tmp_path, monkeypatch):
     fake_grib.parent.mkdir(parents=True, exist_ok=True)
     fake_grib.write_bytes(b"fake")
 
-    def fake_download(issue_time, variable, settings=None, overwrite=False):
+    def fake_download(variable, rel_path, session=None, headers=None, config=None, timeout=None):
         return fake_grib
 
-    monkeypatch.setattr(archive, "download_ndfd_grib", fake_download)
+    monkeypatch.setattr(archive, "_download_tgftp_file", fake_download)
 
     times = pd.date_range(issue_time, periods=2, freq="24h")
     lat_vals = np.array([[44.8, 44.9], [45.0, 45.1]])
@@ -114,14 +114,14 @@ def test_ingest_ndfd_archive_writes_parquet(tmp_path, monkeypatch):
     assert parquet_data["lead_hours"].max() == pytest.approx(24.0)
 
 
-def test_build_remote_url_uses_config():
+def test_build_remote_url_simple():
     issue_time = datetime(2024, 5, 1, 12, tzinfo=timezone.utc)
     cfg = ForecastArchiveConfig(
-        base_url="https://nomads.example",
-        sector="conus",
-        product_files={"TMAX": "ds.max_temp.bin"},
-        grid="ndfd",
+        base_url="https://tgftp.example/SL.us008001/ST.opnl/DF.gr2/DC.ndfd/AR.conus",
+        sector="",
+        product_files={"TMAX": ("VP.001-003/ds.maxt.bin",)},
+        grid="",
         archive_dir=Path("/tmp"),
     )
     url = archive._build_remote_url(issue_time, "TMAX", cfg)
-    assert url == "https://nomads.example/ndfd.20240501/12/conus/ndfd.ds.max_temp.bin"
+    assert url == "https://tgftp.example/SL.us008001/ST.opnl/DF.gr2/DC.ndfd/AR.conus/VP.001-003/ds.maxt.bin"
