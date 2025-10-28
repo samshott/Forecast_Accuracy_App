@@ -24,5 +24,6 @@ dependencies:
       - python-dotenv
       - duckdb-engine
       - psycopg[binary]
+      - scipy
       - folium
       - streamlit-folium

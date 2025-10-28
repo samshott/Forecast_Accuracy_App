@@ -135,6 +135,9 @@ def _to_dataframe(
         lon_df = ds["longitude"].to_dataframe(name="longitude").reset_index()
         df = df.merge(lon_df, on=[col for col in lon_df.columns if col != "longitude"], how="left")
 
+    if "longitude" in df.columns:
+        df["longitude"] = ((df["longitude"] + 180) % 360) - 180
+
     if "x" in df.columns:
         df.rename(columns={"x": "grid_x"}, inplace=True)
     if "y" in df.columns:
