@@ -32,6 +32,10 @@ def load_inventory(path: Path) -> pd.DataFrame:
     return df
 
 
+def _extract_network(series: pd.Series) -> pd.Series:
+    return series.str.split(":", n=1).str[-1].str[:3]
+
+
 def filter_inventory(
     df: pd.DataFrame,
     *,
@@ -39,7 +43,7 @@ def filter_inventory(
     bounds: tuple[float, float, float, float] | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     df = df.copy()
-    df["network"] = df["station_id"].str[:3]
+    df["network"] = _extract_network(df["station_id"])
     desired_networks = {"USW", "USC"}
 
     has_all = df[["has_tmax", "has_tmin", "has_prcp"]].all(axis=1)
@@ -47,6 +51,7 @@ def filter_inventory(
     meets = has_all & in_network
 
     if min_datacoverage is not None and "datacoverage" in df:
+        df["datacoverage"] = pd.to_numeric(df["datacoverage"], errors="coerce")
         meets &= df["datacoverage"].fillna(0) >= min_datacoverage
 
     if bounds is not None:
@@ -82,7 +87,7 @@ def build_map(candidates: pd.DataFrame, excluded: pd.DataFrame) -> folium.Map:
             popup = folium.Popup(
                 folium.Html(
                     f"<b>{row['name']}</b><br/>ID: {row['station_id']}<br/>"
-                    f"Network: {row['station_id'][:3]}<br/>"
+                    f"Network: {row['network']}<br/>"
                     f"TMAX/TMIN/PRCP: {row['has_tmax']}/{row['has_tmin']}/{row['has_prcp']}<br/>"
                     f"Datacoverage: {row.get('datacoverage', 'N/A')}",
                     script=True,
@@ -155,6 +160,9 @@ def main() -> None:
     print(f"Map written to {args.output}")
     print(f"Candidate stations: {len(candidates)}")
     print(f"Excluded stations: {len(excluded)}")
+    if "datacoverage" in candidates and not candidates.empty:
+        stats = candidates["datacoverage"].describe()[["min", "mean", "max"]].to_dict()
+        print("Candidate datacoverage stats:", stats)
 
 
 if __name__ == "__main__":
