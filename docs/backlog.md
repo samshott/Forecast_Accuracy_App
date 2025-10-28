@@ -25,3 +25,10 @@
 - Add retries, caching, and logging instrumentation.
 - Data coverage dashboards, last-update timestamps.
 - Docker image & CI quick tests.
+
+## Side Quest — Historical Coverage Census
+- [ ] Fetch NCEI station metadata for target networks (e.g., GHCND) including available datatypes and coverage.
+- [ ] Identify stations supporting the full variable set (TMAX, TMIN, PRCP) and flag partial coverage.
+- [ ] Produce a coverage map comparing full vs. raw station sets to understand spatial gaps.
+- [ ] Decide ETL strategy (station-only extraction vs. coarsened grid) based on coverage results.
+- [ ] Prototype slow-ingest pipeline: download, subset, and persist station-focused forecast/obs history.
