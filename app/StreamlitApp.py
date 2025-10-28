@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 import sys
-from typing import Iterable
+from typing import Any, Iterable, Optional, Sequence, Tuple
 
 import altair as alt
 import numpy as np
@@ -31,6 +31,7 @@ if str(ROOT) not in sys.path:
 from src.config import load_settings
 from src.ingest_current_forecast import get_current_gridpoint_forecast
 from src.ingest_obs import get_ncei_daily_obs
+from src.ingest_forecast_archive import ingest_ndfd_archive
 from src.matcher import align_daily_pairs
 from src.metrics import score_pairs
 from src.station_lookup import select_nearest_station
@@ -69,6 +70,70 @@ def _load_forecast_history(var: str, forecast_dir: str) -> pd.DataFrame:
     if df.empty:
         return df
     return df
+
+
+def _issue_times_for_range(start_date: date, end_date: date, step_hours: int = 6) -> Sequence[datetime]:
+    now = datetime.now(timezone.utc)
+    cycle_hour = (now.hour // step_hours) * step_hours
+    issue = now.replace(hour=cycle_hour, minute=0, second=0, microsecond=0)
+    return (issue,)
+
+
+def _bbox_from_center(lat: float, lon: float, radius_km: float) -> Tuple[float, float, float, float]:
+    radius_deg_lat = radius_km / 111.0
+    cos_lat = np.cos(np.radians(lat))
+    radius_deg_lon = radius_km / (111.0 * cos_lat) if cos_lat else 360.0
+    min_lat = max(-90.0, lat - radius_deg_lat)
+    max_lat = min(90.0, lat + radius_deg_lat)
+    min_lon = lon - radius_deg_lon
+    max_lon = lon + radius_deg_lon
+    if min_lon < -180.0:
+        min_lon += 360.0
+    if max_lon > 180.0:
+        max_lon -= 360.0
+    return (min_lat, min_lon, max_lat, max_lon)
+
+
+def _ensure_forecast_history(
+    variables: Iterable[str],
+    lat: float,
+    lon: float,
+    start_date: date,
+    end_date: date,
+    settings,
+    status_widget: Optional[Any] = None,
+) -> int:
+    issue_times = _issue_times_for_range(start_date, end_date)
+    forecast_dir = Path(settings.data.forecast_dir)
+    now_utc = datetime.now(timezone.utc)
+    bbox = _bbox_from_center(lat, lon, radius_km=100.0)
+    ingested = 0
+
+    for issue_time in issue_times:
+        if issue_time > now_utc:
+            continue
+        issue_key = issue_time.strftime("%Y%m%d%H")
+        missing_vars = []
+        for var in variables:
+            parquet_path = forecast_dir / var / f"{issue_key}.parquet"
+            if not parquet_path.exists():
+                missing_vars.append(var)
+        if not missing_vars:
+            continue
+        if status_widget is not None:
+            status_widget.info(
+                f"Ingesting {issue_time:%Y-%m-%d %H}Z for {', '.join(missing_vars)} ..."
+            )
+        ingest_ndfd_archive(
+            issue_time,
+            variables=missing_vars,
+            bbox=bbox,
+            settings=settings,
+            write_parquet=True,
+            overwrite_download=False,
+        )
+        ingested += 1
+    return ingested
 
 
 def render_time_series(pairs: pd.DataFrame, variable: str):
@@ -399,6 +464,22 @@ def main():
     )
 
     pairs_df = align_daily_pairs(forecast_df, obs_df)
+
+    history_status = st.empty()
+    with st.spinner("Ensuring historical forecasts are available..."):
+        ingested_cycles = _ensure_forecast_history(
+            selected_variables,
+            lat,
+            lon,
+            start_date,
+            end_date,
+            settings,
+            status_widget=history_status,
+        )
+    if ingested_cycles:
+        history_status.success(f"Fetched {ingested_cycles} forecast cycles for history plots.")
+    else:
+        history_status.info("Historical forecasts already cached for this selection.")
 
     history_forecast = _prepare_point_history(target_var, lat, lon, start_date, end_date, settings)
     history_pairs = pd.DataFrame()
